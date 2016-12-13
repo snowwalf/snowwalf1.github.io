@@ -2,6 +2,62 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://blog.snowwalf.com/resource/css/main.css</loc>
+    
+    <lastmod>2016-12-13T16:50:26.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://blog.snowwalf.com/resource/js/src/bootstrap.js</loc>
+    
+    <lastmod>2016-12-13T16:50:20.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://blog.snowwalf.com/resource/js/src/utils.js</loc>
+    
+    <lastmod>2016-12-13T16:50:20.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://blog.snowwalf.com/resource/js/src/scrollspy.js</loc>
+    
+    <lastmod>2016-12-13T16:50:20.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://blog.snowwalf.com/resource/js/src/hook-duoshuo.js</loc>
+    
+    <lastmod>2016-12-13T16:50:20.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://blog.snowwalf.com/resource/js/src/schemes/pisces.js</loc>
+    
+    <lastmod>2016-12-13T16:50:20.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://blog.snowwalf.com/resource/js/src/motion.js</loc>
+    
+    <lastmod>2016-12-13T16:50:20.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://blog.snowwalf.com/resource/js/src/affix.js</loc>
+    
+    <lastmod>2016-12-13T16:50:20.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://blog.snowwalf.com/about/index.html</loc>
     
     <lastmod>2016-12-13T16:11:36.000Z</lastmod>
