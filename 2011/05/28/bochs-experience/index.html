@@ -72,7 +72,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="linux,bochs," />
+  <meta name="keywords" content="linux,bochs,调试," />
 
 
 
@@ -88,16 +88,16 @@
 
 
 
-<meta name="description" content="bochs+gdb搭建linux0.12内核源码调试环境">
+<meta name="description" content="bochs的使用和调试 linux内核">
 <meta property="og:type" content="article">
-<meta property="og:title" content="bochs+gdb源码级调试linux0.12内核测试环境构建">
-<meta property="og:url" content="http://blog.snowwalf.com/2011/05/31/bochs-gdb-linux0-12-debug/index.html">
+<meta property="og:title" content="bochs的使用心得">
+<meta property="og:url" content="http://blog.snowwalf.com/2011/05/28/bochs-experience/index.html">
 <meta property="og:site_name" content="浮生半日闲">
-<meta property="og:description" content="bochs+gdb搭建linux0.12内核源码调试环境">
-<meta property="og:updated_time" content="2016-12-14T16:18:29.000Z">
+<meta property="og:description" content="bochs的使用和调试 linux内核">
+<meta property="og:updated_time" content="2016-12-14T16:50:07.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="bochs+gdb源码级调试linux0.12内核测试环境构建">
-<meta name="twitter:description" content="bochs+gdb搭建linux0.12内核源码调试环境">
+<meta name="twitter:title" content="bochs的使用心得">
+<meta name="twitter:description" content="bochs的使用和调试 linux内核">
 
 
 
@@ -125,13 +125,13 @@
 
 
 
-  <link rel="canonical" href="http://blog.snowwalf.com/2011/05/31/bochs-gdb-linux0-12-debug/"/>
+  <link rel="canonical" href="http://blog.snowwalf.com/2011/05/28/bochs-experience/"/>
 
 
 
 
 
-  <title> bochs+gdb源码级调试linux0.12内核测试环境构建 | 浮生半日闲 </title>
+  <title> bochs的使用心得 | 浮生半日闲 </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -295,7 +295,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="http://blog.snowwalf.com/2011/05/31/bochs-gdb-linux0-12-debug/">
+  <link itemprop="mainEntityOfPage" href="http://blog.snowwalf.com/2011/05/28/bochs-experience/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="snowwalf">
@@ -319,7 +319,7 @@
             
             
               
-                bochs+gdb源码级调试linux0.12内核测试环境构建
+                bochs的使用心得
               
             
           </h1>
@@ -332,8 +332,8 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2011-05-31T14:12:00+08:00">
-                2011-05-31
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2011-05-28T16:09:00+08:00">
+                2011-05-28
               </time>
             
 
@@ -366,8 +366,8 @@
             
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
-                <a href="/2011/05/31/bochs-gdb-linux0-12-debug/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2011/05/31/bochs-gdb-linux0-12-debug/" itemprop="commentCount"></span>
+                <a href="/2011/05/28/bochs-experience/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2011/05/28/bochs-experience/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -377,7 +377,7 @@
 
           
           
-             <span id="/2011/05/31/bochs-gdb-linux0-12-debug/" class="leancloud_visitors" data-flag-title="bochs+gdb源码级调试linux0.12内核测试环境构建">
+             <span id="/2011/05/28/bochs-experience/" class="leancloud_visitors" data-flag-title="bochs的使用心得">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -402,39 +402,168 @@
       
 
       
-        <p><em>bochs+gdb搭建linux0.12内核源码调试环境</em><br><a id="more"></a></p>
-<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>之前都是用的bochs自带的debug功能，但是linux内核大部分都是用C语vv言来实现的，若仅通过反汇编的汇编来学习，太累了。。。</p>
-<p>所以今天花了一个上午的时间，搭建起了bochs+gbd的联调环境。</p>
-<h1 id="安装bochs"><a href="#安装bochs" class="headerlink" title="安装bochs"></a>安装bochs</h1><p>首先还是要安装bochs，仍然是推荐使用最新的版本（2.4.6），如果使用像2.3.6等老版本，也许会导致后面与gdb无法远程连接（NND，就是这个恶心的问题浪费了我几个小时。。。）</p>
-<p>linux上还是要从bochs的源码编译开始安装，bin文件安装的版本无法提供调试功能。</p>
-<p>配置bochs源码时，输入命令 ./configure –enable-gdb-stub，然后使用make和sudo make install命令完成安装。</p>
-<p>安装时可能会遇到X windows库不全的情况，可以通过apt-get安装xorg-dev解决。</p>
-<p>如果是从source code进行编译安装时，有可能会用到的两个组件分别是build-essential和libxrandr-dev，各自作用请自行搜索～</p>
-<h1 id="配置bochs"><a href="#配置bochs" class="headerlink" title="配置bochs"></a>配置bochs</h1><p>配置bochs虚拟机环境需要一个.bxrc文件和生产一个根文件系统镜像文件，建议直接到oldlinux上下载一个linux-0.11-gdb-rh9-050619.tar.gz，其中已经包含了配置好的这两个文件，另外在linux文件夹下有linux0.11的源码。</p>
-<p>.bxrc文件中主要是添加了一条调试信息<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">gdbstub: enable=1, port=1234, text_base=0, data_base=0, bss_base=0</div></pre></td></tr></table></figure></p>
-<p>另外，这个bxrc文件中需要稍稍修改一些东西：</p>
-<ol>
-<li><p>romimage: file=$BXSHARE/BIOS-bochs-latest,  address=0xf0000 改成 romimage: file=$BXSHARE/BIOS-bochs-latest</p>
-</li>
-<li><p>floppy_command_delay: 50000 改成 #floppy_command_delay: 50000</p>
-</li>
-<li><p>3.ips: 4000000 改成 cpu: count=1, ips=4000000</p>
-</li>
-</ol>
-<h1 id="使用bochs进行联机调试"><a href="#使用bochs进行联机调试" class="headerlink" title="使用bochs进行联机调试"></a>使用bochs进行联机调试</h1><ol>
-<li>打开两个终端。</li>
-<li>一个终端进入到linux-gdb-rh9/，运行程序”./run”，此时窗口显示等待信息“wait for gdb connection on localhost:1234”</li>
-<li>另一个终端进入linux-gdb-rh9/linux/，运行 gdb tools/system</li>
-<li>在gdb窗口中输入b main（在main函数处下断）</li>
-<li>输入target remote localhost:1234 ，连接到bochs虚拟机上</li>
-<li>输入c，让程序持续运行，直到终端在main函数中</li>
-<li>可以开始使用gdb进行源码调试了^_^</li>
-</ol>
-<h1 id="Tips"><a href="#Tips" class="headerlink" title="Tips"></a>Tips</h1><ul>
-<li>早期源码默认的汇编编译器为gas，链接器为gld，所以在Makefile文件中显示声明as=gas ld=gld。而在ubuntu 11.04中，gcc早已成为默认的编译器了，所以如果是另外下载的源码，需要将Makefile中的as=gas ld=gld改成 as=as， ld=ld</li>
+        <p>bochs的使用和调试 linux内核<br><a id="more"></a></p>
+<h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>bochs的简介吧，来自度娘：</p>
+<blockquote>
+<p>Bochs是一个x86硬件平台的开源模拟器。它可以模拟各种硬件的配置。Bochs模拟的是整个PC平台，包括I/O设备、内存和BIOS。更为有趣的是，甚至可以不使用PC硬件来运行Bochs。事实上，它可以在任何编译运行Bochs的平台上模拟x86硬件。通过改变配置，可以指定使用的CPU(386、486或者586)，以及内存大小等。一句话，Bochs是电脑里的“PC”。根据需要，Bochs还可以模拟多台PC，此外，它甚至还有自己的电源按钮。</p>
+</blockquote>
+<p>用下来感觉bochs非常小巧，相比于VM功能上并不相差很多，而且对于一些比较“古董”的硬件接口支持比较好，通过.bxrc文件能够很方便的生产和配置硬件。bochs内嵌的调试器比较好用，可以从虚拟机通电加载ROM BIOS起开始调试，对于了解操作系统的详细原理还是很有帮助的。就是没有图形化得调试界面比较蛋疼。。。用惯了VS,Windbg的人有点压力大。。。不过慢慢用就习惯了。</p>
+<h1 id="获取bochs"><a href="#获取bochs" class="headerlink" title="获取bochs"></a>获取bochs</h1><p>可以去Sourceforge上下载src或者bin： <a href="http://bochs.sourceforge.net/" target="_blank" rel="external">http://bochs.sourceforge.net/</a>  （linux上建议还是从src开始编译，bin版本中往往不带有bochsdbg这个调试程序。。。windows的话可以直接用.exe的，安装完后是包含dbg程序的，所以我还是用的windows版^_^）</p>
+<p>也可以去oldlinux上下载： <a href="http://oldlinux.org/Linux.old/bochs/" target="_blank" rel="external">http://oldlinux.org/Linux.old/bochs/</a><br>赵炯老师的书上建议调试Linux0.12使用的是bochs2.3.6，但经我实测发现最新的版本（现在是2.4.6）也是也是兼容的，而且2.4.6的调试指令相比老版本有不少的改进，所以还是建议使用最新的版本。</p>
+<h1 id="安装和配置"><a href="#安装和配置" class="headerlink" title="安装和配置"></a>安装和配置</h1><p>安装和配置比较简单，windows的话只要下一步就OK；</p>
+<p>linux上编译src需要在编译时设置编译选项：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">./configure --prefix=/opt/bochs/debug --enable-plugins --enable-debugger --enable- disasm</div></pre></td></tr></table></figure>
+<ul>
+<li>–prefix=/opt/bochs/debug 软件将被安装到哪个目录下</li>
+<li>–enable-plugins 是必须要的</li>
+<li>–enable-debugger 是打开bochs的自带调试器</li>
+<li>–enbale-disasm 允许反汇编</li>
 </ul>
-<hr>
-<p>先写到这，有在想到的继续啊~~~^_^</p>
+<h1 id="调试指令"><a href="#调试指令" class="headerlink" title="调试指令"></a>调试指令</h1><p>再来些bochsdbg的调试指令吧，网上搜的有些指令因为版本问题并不能使用（我用的是2.4.6）：</p>
+<h2 id="普通指令组"><a href="#普通指令组" class="headerlink" title="普通指令组"></a>普通指令组</h2><table>
+<thead>
+<tr>
+<th>指令格式</th>
+<th style="text-align:left">功能描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>b addr</td>
+<td style="text-align:left">在物理地址处设置断点 addr为物理内存地址，不加段基址</td>
+</tr>
+<tr>
+<td>lb addr</td>
+<td style="text-align:left">在线性地址处设置断点  addr为线性物理地址，不加基址</td>
+</tr>
+<tr>
+<td>vb addr</td>
+<td style="text-align:left">在虚拟地址上设置断点 addr为段基址：偏移地址， cs段</td>
+</tr>
+<tr>
+<td>c</td>
+<td style="text-align:left">继续执行知道遇到断点</td>
+</tr>
+<tr>
+<td>n</td>
+<td style="text-align:left">单步执行 跳过子程序和int中断程序</td>
+</tr>
+<tr>
+<td>s</td>
+<td style="text-align:left">单步执行</td>
+</tr>
+<tr>
+<td>s num</td>
+<td style="text-align:left">执行n步</td>
+</tr>
+<tr>
+<td>dump_cpu</td>
+<td style="text-align:left">查看寄存器信息（实测下来这个指令好像不好使）</td>
+</tr>
+<tr>
+<td>x /nuf addr</td>
+<td style="text-align:left">显示指定内存地址的数据，addr可以是线性的内存地址，也可以是虚址 格式是基址：偏移或者基址寄存器：偏移<br>n 显示的数据长度<br>u 数据单元大小 b,h,w,g分别对应1,2,4,8字节<br>f 数据显示格式 x,d,u,o,t,c分别对应十六进制、十进制、无符号十进制、八进制、二进制、字符串</td>
+</tr>
+<tr>
+<td>u [/count] start end</td>
+<td style="text-align:left">反汇编一段线性内存(作用与上面的一样)<br>(count 参数指明要反汇编的指令条数 ,例子：u /5 –反汇编从当前地址开始的5条指令)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="info指令组"><a href="#info指令组" class="headerlink" title="info指令组"></a>info指令组</h2><table>
+<thead>
+<tr>
+<th>指令格式</th>
+<th style="text-align:left">功能描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>info b</td>
+<td style="text-align:left">展示当前的断点状态信息</td>
+</tr>
+<tr>
+<td>info dirty</td>
+<td style="text-align:left">展示自从上次显示以来物理内存中的脏页（被写的页）</td>
+</tr>
+<tr>
+<td>info program</td>
+<td style="text-align:left">展示程序的执行状态（无法使用！）</td>
+</tr>
+<tr>
+<td>info r/reg/rigisters</td>
+<td style="text-align:left">展示寄存器内容</td>
+</tr>
+<tr>
+<td>info cpu</td>
+<td style="text-align:left">展示CPU寄存器内容</td>
+</tr>
+<tr>
+<td>info fpu</td>
+<td style="text-align:left">展示FPU寄存器的状态</td>
+</tr>
+<tr>
+<td>info idt</td>
+<td style="text-align:left">展示中断描述表</td>
+</tr>
+<tr>
+<td>info ivt</td>
+<td style="text-align:left">展示中断向量表(保护模式下无效)</td>
+</tr>
+<tr>
+<td>info gdt</td>
+<td style="text-align:left">展示全局描述表</td>
+</tr>
+<tr>
+<td>info tss</td>
+<td style="text-align:left">展示当前的任务状态段</td>
+</tr>
+<tr>
+<td>info cr</td>
+<td style="text-align:left">展示CR0-CR4寄存器状态 （无法使用）</td>
+</tr>
+<tr>
+<td>info flags</td>
+<td style="text-align:left">展示标志寄存器   （无法使用）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="寄存器查询"><a href="#寄存器查询" class="headerlink" title="寄存器查询"></a>寄存器查询</h2><table>
+<thead>
+<tr>
+<th>指令格式</th>
+<th style="text-align:left">功能描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>r</td>
+<td style="text-align:left">查看通用寄存器</td>
+</tr>
+<tr>
+<td>sreg</td>
+<td style="text-align:left">查看段寄存器（es,cs,gs,ss,fs,ds以及idt,gdt,ldt,tr）</td>
+</tr>
+<tr>
+<td>creg</td>
+<td style="text-align:left">查看控制寄存器（cr0，cr1，cr2，cr3）</td>
+</tr>
+<tr>
+<td>dreg</td>
+<td style="text-align:left">查看调试寄存器（dr0-dr7）</td>
+</tr>
+</tbody>
+</table>
+<p>这里再插一句，标志寄存器的查看方法：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">eflags 0x00000002: id vip vif ac vm rf nt IOPL=0 of df if tf sf zf af pf cf    （均未置位）</div><div class="line"></div><div class="line">eflags 0x00000046: id vip vif ac vm rf nt IOPL=0 of df if tf sf ZF af PF cf （ZF,PF置位）</div></pre></td></tr></table></figure></p>
+<p>0x00000002是标志寄存器的实际数值，后面的zf，sf等为标志位，小写时标志位未置位，大写为已置位。</p>
+<h1 id="在linux0-12系统上编译0-12内核："><a href="#在linux0-12系统上编译0-12内核：" class="headerlink" title="在linux0.12系统上编译0.12内核："></a>在linux0.12系统上编译0.12内核：</h1><ul>
+<li><p>从前文下载的根文件系统rootimage-0.12上已经包含了0.12内核的源码，位于/usr/src/linux。</p>
+</li>
+<li><p>使用make命令编译源码，生成引导区启动镜像文件Image。</p>
+</li>
+<li><p>通过命令dd bs=8192 if=Image of=/dev/fd0 将生成的镜像输出到虚拟软盘文件bootimage-0.12-hd上（记得先备份一个啊！），再次启动bochs，即可由新的镜像引导启动了。</p>
+</li>
+</ul>
 
       
     </div>
@@ -462,6 +591,8 @@
           
             <a href="/tags/bochs/" rel="tag"># bochs</a>
           
+            <a href="/tags/调试/" rel="tag"># 调试</a>
+          
         </div>
       
 
@@ -469,8 +600,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2011/05/28/bochs-experience/" rel="next" title="bochs的使用心得">
-                <i class="fa fa-chevron-left"></i> bochs的使用心得
+              <a href="/2011/05/27/a20-bus/" rel="next" title="A20地址线的一点理解">
+                <i class="fa fa-chevron-left"></i> A20地址线的一点理解
               </a>
             
           </div>
@@ -479,8 +610,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2016/12/12/ffmpeg-watermark/" rel="prev" title="ffmpeg添加图片水印的畸变问题">
-                ffmpeg添加图片水印的畸变问题 <i class="fa fa-chevron-right"></i>
+              <a href="/2011/05/31/bochs-gdb-linux0-12-debug/" rel="prev" title="bochs+gdb源码级调试linux0.12内核测试环境构建">
+                bochs+gdb源码级调试linux0.12内核测试环境构建 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -507,8 +638,8 @@
           
   <div class="comments" id="comments">
     
-      <div class="ds-thread" data-thread-key="2011/05/31/bochs-gdb-linux0-12-debug/"
-           data-title="bochs+gdb源码级调试linux0.12内核测试环境构建" data-url="http://blog.snowwalf.com/2011/05/31/bochs-gdb-linux0-12-debug/">
+      <div class="ds-thread" data-thread-key="2011/05/28/bochs-experience/"
+           data-title="bochs的使用心得" data-url="http://blog.snowwalf.com/2011/05/28/bochs-experience/">
       </div>
     
   </div>
@@ -625,7 +756,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#安装bochs"><span class="nav-number">2.</span> <span class="nav-text">安装bochs</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#配置bochs"><span class="nav-number">3.</span> <span class="nav-text">配置bochs</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#使用bochs进行联机调试"><span class="nav-number">4.</span> <span class="nav-text">使用bochs进行联机调试</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Tips"><span class="nav-number">5.</span> <span class="nav-text">Tips</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#简介"><span class="nav-number">1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#获取bochs"><span class="nav-number">2.</span> <span class="nav-text">获取bochs</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#安装和配置"><span class="nav-number">3.</span> <span class="nav-text">安装和配置</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#调试指令"><span class="nav-number">4.</span> <span class="nav-text">调试指令</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#普通指令组"><span class="nav-number">4.1.</span> <span class="nav-text">普通指令组</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#info指令组"><span class="nav-number">4.2.</span> <span class="nav-text">info指令组</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#寄存器查询"><span class="nav-number">4.3.</span> <span class="nav-text">寄存器查询</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#在linux0-12系统上编译0-12内核："><span class="nav-number">5.</span> <span class="nav-text">在linux0.12系统上编译0.12内核：</span></a></li></ol></div>
             
 
           </div>

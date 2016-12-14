@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://blog.snowwalf.com/"/>
-  <updated>2016-12-14T15:59:26.000Z</updated>
+  <updated>2016-12-14T16:18:38.000Z</updated>
   <id>http://blog.snowwalf.com/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="http://blog.snowwalf.com/2016/12/12/ffmpeg-watermark/"/>
     <id>http://blog.snowwalf.com/2016/12/12/ffmpeg-watermark/</id>
     <published>2016-12-12T14:38:35.000Z</published>
-    <updated>2016-12-14T15:59:26.000Z</updated>
+    <updated>2016-12-14T16:18:38.000Z</updated>
     
     <content type="html"><![CDATA[<p>音视频添加图片水印时，SAR/DAR会造成水印随帧画面畸变<br><a id="more"></a></p>
 <h1 id="PAR-SAR-DAR"><a href="#PAR-SAR-DAR" class="headerlink" title="PAR/SAR/DAR"></a>PAR/SAR/DAR</h1><h2 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h2><ul>
@@ -89,7 +89,7 @@
     <link href="http://blog.snowwalf.com/2011/05/31/bochs-gdb-linux0-12-debug/"/>
     <id>http://blog.snowwalf.com/2011/05/31/bochs-gdb-linux0-12-debug/</id>
     <published>2011-05-31T06:12:00.000Z</published>
-    <updated>2016-12-13T15:41:22.000Z</updated>
+    <updated>2016-12-14T16:18:29.000Z</updated>
     
     <content type="html"><![CDATA[<p><em>bochs+gdb搭建linux0.12内核源码调试环境</em><br><a id="more"></a></p>
 <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>之前都是用的bochs自带的debug功能，但是linux内核大部分都是用C语vv言来实现的，若仅通过反汇编的汇编来学习，太累了。。。</p>
@@ -137,6 +137,196 @@
     
       <category term="linux" scheme="http://blog.snowwalf.com/tags/linux/"/>
     
+      <category term="bochs" scheme="http://blog.snowwalf.com/tags/bochs/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>bochs的使用心得</title>
+    <link href="http://blog.snowwalf.com/2011/05/28/bochs-experience/"/>
+    <id>http://blog.snowwalf.com/2011/05/28/bochs-experience/</id>
+    <published>2011-05-28T08:09:00.000Z</published>
+    <updated>2016-12-14T16:50:07.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>bochs的使用和调试 linux内核<br><a id="more"></a></p>
+<h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>bochs的简介吧，来自度娘：</p>
+<blockquote>
+<p>Bochs是一个x86硬件平台的开源模拟器。它可以模拟各种硬件的配置。Bochs模拟的是整个PC平台，包括I/O设备、内存和BIOS。更为有趣的是，甚至可以不使用PC硬件来运行Bochs。事实上，它可以在任何编译运行Bochs的平台上模拟x86硬件。通过改变配置，可以指定使用的CPU(386、486或者586)，以及内存大小等。一句话，Bochs是电脑里的“PC”。根据需要，Bochs还可以模拟多台PC，此外，它甚至还有自己的电源按钮。</p>
+</blockquote>
+<p>用下来感觉bochs非常小巧，相比于VM功能上并不相差很多，而且对于一些比较“古董”的硬件接口支持比较好，通过.bxrc文件能够很方便的生产和配置硬件。bochs内嵌的调试器比较好用，可以从虚拟机通电加载ROM BIOS起开始调试，对于了解操作系统的详细原理还是很有帮助的。就是没有图形化得调试界面比较蛋疼。。。用惯了VS,Windbg的人有点压力大。。。不过慢慢用就习惯了。</p>
+<h1 id="获取bochs"><a href="#获取bochs" class="headerlink" title="获取bochs"></a>获取bochs</h1><p>可以去Sourceforge上下载src或者bin： <a href="http://bochs.sourceforge.net/" target="_blank" rel="external">http://bochs.sourceforge.net/</a>  （linux上建议还是从src开始编译，bin版本中往往不带有bochsdbg这个调试程序。。。windows的话可以直接用.exe的，安装完后是包含dbg程序的，所以我还是用的windows版^_^）</p>
+<p>也可以去oldlinux上下载： <a href="http://oldlinux.org/Linux.old/bochs/" target="_blank" rel="external">http://oldlinux.org/Linux.old/bochs/</a><br>赵炯老师的书上建议调试Linux0.12使用的是bochs2.3.6，但经我实测发现最新的版本（现在是2.4.6）也是也是兼容的，而且2.4.6的调试指令相比老版本有不少的改进，所以还是建议使用最新的版本。</p>
+<h1 id="安装和配置"><a href="#安装和配置" class="headerlink" title="安装和配置"></a>安装和配置</h1><p>安装和配置比较简单，windows的话只要下一步就OK；</p>
+<p>linux上编译src需要在编译时设置编译选项：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">./configure --prefix=/opt/bochs/debug --enable-plugins --enable-debugger --enable- disasm</div></pre></td></tr></table></figure>
+<ul>
+<li>–prefix=/opt/bochs/debug 软件将被安装到哪个目录下</li>
+<li>–enable-plugins 是必须要的</li>
+<li>–enable-debugger 是打开bochs的自带调试器</li>
+<li>–enbale-disasm 允许反汇编</li>
+</ul>
+<h1 id="调试指令"><a href="#调试指令" class="headerlink" title="调试指令"></a>调试指令</h1><p>再来些bochsdbg的调试指令吧，网上搜的有些指令因为版本问题并不能使用（我用的是2.4.6）：</p>
+<h2 id="普通指令组"><a href="#普通指令组" class="headerlink" title="普通指令组"></a>普通指令组</h2><table>
+<thead>
+<tr>
+<th>指令格式</th>
+<th style="text-align:left">功能描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>b addr</td>
+<td style="text-align:left">在物理地址处设置断点 addr为物理内存地址，不加段基址</td>
+</tr>
+<tr>
+<td>lb addr</td>
+<td style="text-align:left">在线性地址处设置断点  addr为线性物理地址，不加基址</td>
+</tr>
+<tr>
+<td>vb addr</td>
+<td style="text-align:left">在虚拟地址上设置断点 addr为段基址：偏移地址， cs段</td>
+</tr>
+<tr>
+<td>c</td>
+<td style="text-align:left">继续执行知道遇到断点</td>
+</tr>
+<tr>
+<td>n</td>
+<td style="text-align:left">单步执行 跳过子程序和int中断程序</td>
+</tr>
+<tr>
+<td>s</td>
+<td style="text-align:left">单步执行</td>
+</tr>
+<tr>
+<td>s num</td>
+<td style="text-align:left">执行n步</td>
+</tr>
+<tr>
+<td>dump_cpu</td>
+<td style="text-align:left">查看寄存器信息（实测下来这个指令好像不好使）</td>
+</tr>
+<tr>
+<td>x /nuf addr</td>
+<td style="text-align:left">显示指定内存地址的数据，addr可以是线性的内存地址，也可以是虚址 格式是基址：偏移或者基址寄存器：偏移<br>n 显示的数据长度<br>u 数据单元大小 b,h,w,g分别对应1,2,4,8字节<br>f 数据显示格式 x,d,u,o,t,c分别对应十六进制、十进制、无符号十进制、八进制、二进制、字符串</td>
+</tr>
+<tr>
+<td>u [/count] start end</td>
+<td style="text-align:left">反汇编一段线性内存(作用与上面的一样)<br>(count 参数指明要反汇编的指令条数 ,例子：u /5 –反汇编从当前地址开始的5条指令)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="info指令组"><a href="#info指令组" class="headerlink" title="info指令组"></a>info指令组</h2><table>
+<thead>
+<tr>
+<th>指令格式</th>
+<th style="text-align:left">功能描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>info b</td>
+<td style="text-align:left">展示当前的断点状态信息</td>
+</tr>
+<tr>
+<td>info dirty</td>
+<td style="text-align:left">展示自从上次显示以来物理内存中的脏页（被写的页）</td>
+</tr>
+<tr>
+<td>info program</td>
+<td style="text-align:left">展示程序的执行状态（无法使用！）</td>
+</tr>
+<tr>
+<td>info r/reg/rigisters</td>
+<td style="text-align:left">展示寄存器内容</td>
+</tr>
+<tr>
+<td>info cpu</td>
+<td style="text-align:left">展示CPU寄存器内容</td>
+</tr>
+<tr>
+<td>info fpu</td>
+<td style="text-align:left">展示FPU寄存器的状态</td>
+</tr>
+<tr>
+<td>info idt</td>
+<td style="text-align:left">展示中断描述表</td>
+</tr>
+<tr>
+<td>info ivt</td>
+<td style="text-align:left">展示中断向量表(保护模式下无效)</td>
+</tr>
+<tr>
+<td>info gdt</td>
+<td style="text-align:left">展示全局描述表</td>
+</tr>
+<tr>
+<td>info tss</td>
+<td style="text-align:left">展示当前的任务状态段</td>
+</tr>
+<tr>
+<td>info cr</td>
+<td style="text-align:left">展示CR0-CR4寄存器状态 （无法使用）</td>
+</tr>
+<tr>
+<td>info flags</td>
+<td style="text-align:left">展示标志寄存器   （无法使用）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="寄存器查询"><a href="#寄存器查询" class="headerlink" title="寄存器查询"></a>寄存器查询</h2><table>
+<thead>
+<tr>
+<th>指令格式</th>
+<th style="text-align:left">功能描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>r</td>
+<td style="text-align:left">查看通用寄存器</td>
+</tr>
+<tr>
+<td>sreg</td>
+<td style="text-align:left">查看段寄存器（es,cs,gs,ss,fs,ds以及idt,gdt,ldt,tr）</td>
+</tr>
+<tr>
+<td>creg</td>
+<td style="text-align:left">查看控制寄存器（cr0，cr1，cr2，cr3）</td>
+</tr>
+<tr>
+<td>dreg</td>
+<td style="text-align:left">查看调试寄存器（dr0-dr7）</td>
+</tr>
+</tbody>
+</table>
+<p>这里再插一句，标志寄存器的查看方法：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">eflags 0x00000002: id vip vif ac vm rf nt IOPL=0 of df if tf sf zf af pf cf    （均未置位）</div><div class="line"></div><div class="line">eflags 0x00000046: id vip vif ac vm rf nt IOPL=0 of df if tf sf ZF af PF cf （ZF,PF置位）</div></pre></td></tr></table></figure></p>
+<p>0x00000002是标志寄存器的实际数值，后面的zf，sf等为标志位，小写时标志位未置位，大写为已置位。</p>
+<h1 id="在linux0-12系统上编译0-12内核："><a href="#在linux0-12系统上编译0-12内核：" class="headerlink" title="在linux0.12系统上编译0.12内核："></a>在linux0.12系统上编译0.12内核：</h1><ul>
+<li><p>从前文下载的根文件系统rootimage-0.12上已经包含了0.12内核的源码，位于/usr/src/linux。</p>
+</li>
+<li><p>使用make命令编译源码，生成引导区启动镜像文件Image。</p>
+</li>
+<li><p>通过命令dd bs=8192 if=Image of=/dev/fd0 将生成的镜像输出到虚拟软盘文件bootimage-0.12-hd上（记得先备份一个啊！），再次启动bochs，即可由新的镜像引导启动了。</p>
+</li>
+</ul>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;bochs的使用和调试 linux内核&lt;br&gt;
+    
+    </summary>
+    
+      <category term="Linux内核" scheme="http://blog.snowwalf.com/categories/Linux%E5%86%85%E6%A0%B8/"/>
+    
+    
+      <category term="linux" scheme="http://blog.snowwalf.com/tags/linux/"/>
+    
+      <category term="bochs" scheme="http://blog.snowwalf.com/tags/bochs/"/>
+    
+      <category term="调试" scheme="http://blog.snowwalf.com/tags/%E8%B0%83%E8%AF%95/"/>
+    
   </entry>
   
   <entry>
@@ -144,7 +334,7 @@
     <link href="http://blog.snowwalf.com/2011/05/27/a20-bus/"/>
     <id>http://blog.snowwalf.com/2011/05/27/a20-bus/</id>
     <published>2011-05-27T11:30:00.000Z</published>
-    <updated>2016-12-13T15:25:55.000Z</updated>
+    <updated>2016-12-14T16:17:44.000Z</updated>
     
     <content type="html"><![CDATA[<p><em>A20地址线 Linux内核实现及系统启动引导</em><br><a id="more"></a></p>
 <h2 id="A20地址线"><a href="#A20地址线" class="headerlink" title="A20地址线"></a>A20地址线</h2><p>先来看看A20地址线的由来和历史遗留问题（纯搬运）：</p>
