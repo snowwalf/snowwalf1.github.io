@@ -2,13 +2,6 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
-    <loc>http://blog.snowwalf.com/google8c6002a3e324804d.html</loc>
-    
-    <lastmod>2016-12-15T04:44:58.000Z</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>http://blog.snowwalf.com/2011/05/28/bochs-experience/</loc>
     
     <lastmod>2016-12-14T16:50:07.000Z</lastmod>
@@ -51,14 +44,14 @@
   </url>
   
   <url>
-    <loc>http://blog.snowwalf.com/resource/js/src/bootstrap.js</loc>
+    <loc>http://blog.snowwalf.com/resource/js/src/hook-duoshuo.js</loc>
     
     <lastmod>2016-12-13T16:50:20.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://blog.snowwalf.com/resource/js/src/hook-duoshuo.js</loc>
+    <loc>http://blog.snowwalf.com/resource/js/src/bootstrap.js</loc>
     
     <lastmod>2016-12-13T16:50:20.000Z</lastmod>
     
@@ -72,14 +65,14 @@
   </url>
   
   <url>
-    <loc>http://blog.snowwalf.com/resource/js/src/scrollspy.js</loc>
+    <loc>http://blog.snowwalf.com/resource/js/src/utils.js</loc>
     
     <lastmod>2016-12-13T16:50:20.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://blog.snowwalf.com/resource/js/src/utils.js</loc>
+    <loc>http://blog.snowwalf.com/resource/js/src/scrollspy.js</loc>
     
     <lastmod>2016-12-13T16:50:20.000Z</lastmod>
     
