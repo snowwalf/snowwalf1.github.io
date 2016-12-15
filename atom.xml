@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://blog.snowwalf.com/"/>
-  <updated>2016-12-14T16:18:38.000Z</updated>
+  <updated>2016-12-15T14:10:24.000Z</updated>
   <id>http://blog.snowwalf.com/</id>
   
   <author>
@@ -20,9 +20,9 @@
     <link href="http://blog.snowwalf.com/2016/12/12/ffmpeg-watermark/"/>
     <id>http://blog.snowwalf.com/2016/12/12/ffmpeg-watermark/</id>
     <published>2016-12-12T14:38:35.000Z</published>
-    <updated>2016-12-14T16:18:38.000Z</updated>
+    <updated>2016-12-15T14:10:24.000Z</updated>
     
-    <content type="html"><![CDATA[<p>音视频添加图片水印时，SAR/DAR会造成水印随帧画面畸变<br><a id="more"></a></p>
+    <content type="html"><![CDATA[<p><em>摘要： 音视频添加图片水印时，SAR/DAR会造成图片水印随帧画面畸变。本文将分析畸变产生原因和探索解决方案</em><br><a id="more"></a></p>
 <h1 id="PAR-SAR-DAR"><a href="#PAR-SAR-DAR" class="headerlink" title="PAR/SAR/DAR"></a>PAR/SAR/DAR</h1><h2 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h2><ul>
 <li>PAR(Pixel Aspect Ratio) 像素宽高比：单个像素的宽高比，通常该值为1，即正方形像素；若不为1，则为长方形像素。</li>
 <li>SAR(Sample Aspect Ratio) 采样纵横比：视频横向对应的像素个数比上视频纵向的像素个数，即为我们通常提到的分辨率。</li>
@@ -63,13 +63,28 @@
 <h2 id="播放形变带来的水印形变"><a href="#播放形变带来的水印形变" class="headerlink" title="播放形变带来的水印形变"></a>播放形变带来的水印形变</h2><p>图片水印通常直接合成在原始帧画面中，故播放端的形变会连带造成水印产生畸变</p>
 <p>以上述形变方式1为例，假设为原始视频打上一个40x40的方形水印，在终端播放时，长边会进行1.185倍的缩放，故实际水印显示大小约为47x40，畸变成为一个长方形水印</p>
 <h1 id="图片水印畸变的解决方案"><a href="#图片水印畸变的解决方案" class="headerlink" title="图片水印畸变的解决方案"></a>图片水印畸变的解决方案</h1><p>在实际的生产应用中，有些需求水印要保持原始的长宽比，不能发生畸变，此时需要对图片水印畸变进行修正</p>
-<p>由于播放形变取决的终端行为，故对水印畸变的情况并不能准确预测，不同的畸变模式的修正方式不一样，博主仅能据工作中的实际处理情况给出一些解决方案，欢迎大家指正~</p>
-<p><em>（未完待续）</em></p>
+<h2 id="反向修正水印图片"><a href="#反向修正水印图片" class="headerlink" title="反向修正水印图片"></a>反向修正水印图片</h2><p>顾名思义，由于畸变发生在播放终端，故可以预测畸变行为，预先将水印图片变形后再压入原始帧画面，预变形图片会按预期畸变后恢复正常</p>
+<p>以样例视频二为例，添加40x40的水印，假设采用第一种形变方式：</p>
+<ol>
+<li>计算可知，原始帧画面横边缩放比为1.185</li>
+<li>反向压缩水印视频W=40/1.185=34，即将水印图片压缩成为34x40</li>
+<li>终端播放，根据第一种形变方式，长边缩放，图片水印W’=34*1.185=40，即恢复到40x40的水印图片</li>
+</ol>
+<p>第二种形变方式处理方式相同</p>
+<p><font color="red">上述方式存在问题</font>：</p>
+<p>如果预测的形变方式与终端实际形变方式不同，可能造成水印图片等比缩放</p>
+<p>比如，预测第一种形变方式，实际终端播放采用第二中形变方式：</p>
+<ol>
+<li>水印图片压缩后34x40</li>
+<li>终端播放时，短边缩放比为0.84375，播放时水印高H=40*0.84375=34，即水印图片实际播放大小为34x34，即实际水印等比缩放了0.84375倍</li>
+</ol>
+<p>而若是终端播放采用第三种形变方式，则水印图片畸变不可预测，故修正后仍可能畸变</p>
+<p><em>（由于播放形变取决的终端行为，故对水印畸变的情况并不能准确预测，不同的畸变模式的修正方式不一样，博主仅能据工作中的实际处理情况给出一些解决方案，欢迎大家指正）</em></p>
 ]]></content>
     
     <summary type="html">
     
-      &lt;p&gt;音视频添加图片水印时，SAR/DAR会造成水印随帧画面畸变&lt;br&gt;
+      &lt;p&gt;&lt;em&gt;摘要： 音视频添加图片水印时，SAR/DAR会造成图片水印随帧画面畸变。本文将分析畸变产生原因和探索解决方案&lt;/em&gt;&lt;br&gt;
     
     </summary>
     
@@ -80,7 +95,7 @@
     
       <category term="音视频" scheme="http://blog.snowwalf.com/tags/%E9%9F%B3%E8%A7%86%E9%A2%91/"/>
     
-      <category term="图片水印" scheme="http://blog.snowwalf.com/tags/%E5%9B%BE%E7%89%87%E6%B0%B4%E5%8D%B0/"/>
+      <category term="视频水印" scheme="http://blog.snowwalf.com/tags/%E8%A7%86%E9%A2%91%E6%B0%B4%E5%8D%B0/"/>
     
   </entry>
   

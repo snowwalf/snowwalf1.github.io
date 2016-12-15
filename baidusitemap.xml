@@ -4,6 +4,30 @@
 
     
   <url>
+    <loc>http://blog.snowwalf.com/2016/12/12/ffmpeg-watermark/</loc>
+    <lastmod>2016-12-15T14:10:24.000Z</lastmod>
+    <data>
+        <display>
+        <title>ffmpeg添加图片水印的畸变问题</title>
+        <pubTime>2016-12-12T14:38:35.000Z</pubTime>
+        
+        <tag>ffmpeg</tag>
+         
+        <tag>音视频</tag>
+         
+        <tag>视频水印</tag>
+         
+         
+           
+             
+              <breadCrumb title="音视频处理" url="http://blog.snowwalf.com/categories/%E9%9F%B3%E8%A7%86%E9%A2%91%E5%A4%84%E7%90%86/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://blog.snowwalf.com/2011/05/28/bochs-experience/</loc>
     <lastmod>2016-12-14T16:50:07.000Z</lastmod>
     <data>
@@ -21,30 +45,6 @@
            
              
               <breadCrumb title="Linux内核" url="http://blog.snowwalf.com/categories/Linux%E5%86%85%E6%A0%B8/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://blog.snowwalf.com/2016/12/12/ffmpeg-watermark/</loc>
-    <lastmod>2016-12-14T16:18:38.000Z</lastmod>
-    <data>
-        <display>
-        <title>ffmpeg添加图片水印的畸变问题</title>
-        <pubTime>2016-12-12T14:38:35.000Z</pubTime>
-        
-        <tag>ffmpeg</tag>
-         
-        <tag>音视频</tag>
-         
-        <tag>图片水印</tag>
-         
-         
-           
-             
-              <breadCrumb title="音视频处理" url="http://blog.snowwalf.com/categories/%E9%9F%B3%E8%A7%86%E9%A2%91%E5%A4%84%E7%90%86/"/>
           
         </display>
     </data>
