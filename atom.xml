@@ -100,6 +100,54 @@
   </entry>
   
   <entry>
+    <title>CPU高速缓存行对齐</title>
+    <link href="http://blog.snowwalf.com/2011/09/17/CPU%E9%AB%98%E9%80%9F%E7%BC%93%E5%AD%98%E8%A1%8C%E5%AF%B9%E9%BD%90/"/>
+    <id>http://blog.snowwalf.com/2011/09/17/CPU高速缓存行对齐/</id>
+    <published>2011-09-17T01:48:00.000Z</published>
+    <updated>2016-12-15T14:38:16.000Z</updated>
+    
+    <content type="html"><![CDATA[<p><em>摘要：本文介绍了CPU高速缓存以及高速缓存行对齐，探索编程中对于行对齐的优化</em><br><a id="more"></a></p>
+<h1 id="CPU高速缓存"><a href="#CPU高速缓存" class="headerlink" title="CPU高速缓存"></a>CPU高速缓存</h1><p>CPU的高速缓存一般分为一级缓存和二级缓存，现今更多的CPU更是提供了三级缓存。</p>
+<p>CPU在运行时首先从一级缓存读取数据，如果读取失败则会从二级缓存读取数据，如果仍然失败则再从内存中存读取数据。而CPU从一级缓存或二级缓存或主内存中最终读取到数据所耗费的时钟周期差距是非常之大的。因此高速缓存的容量和速度直接影响到CPU的工作性能。</p>
+<p>一级缓存都内置在CPU内部并与CPU同速运行，可以有效的提高CPU的运行效率。一级缓存越大，CPU的运行效率往往越高。</p>
+<h1 id="高速缓存行对齐"><a href="#高速缓存行对齐" class="headerlink" title="高速缓存行对齐"></a>高速缓存行对齐</h1><h2 id="单CPU缓存行对齐"><a href="#单CPU缓存行对齐" class="headerlink" title="单CPU缓存行对齐"></a>单CPU缓存行对齐</h2><p>一级缓存又分为数据缓存和指令缓存，他们都由高速缓存行组成，对于X86架构的CPU来说，高速缓存行一般是32个字节，早期的CPU大约只有512行高速缓存行，也就是说约16k的一级缓存。而现在的CPU一般都是32K以上的一级缓存。</p>
+<p>当CPU需要读取一个变量时，该变量所在的以32字节分组的内存数据将被一同读入高速缓存行，所以，对于性能要求严格的程序来说，充分利用高速缓存行的优势非常重要。一次性将访问频繁的32字节数据对齐后读入高速缓存中，减少CPU高级缓存与低级缓存、内存的数据交换。</p>
+<h2 id="多CPU缓存行对齐"><a href="#多CPU缓存行对齐" class="headerlink" title="多CPU缓存行对齐"></a>多CPU缓存行对齐</h2><p>对于多CPU的计算机，情况却又不一样了：</p>
+<ol>
+<li>CPU1读取了一个字节，以及它和它相邻的字节被读入 CPU1 的高速缓存。</li>
+<li>CPU2做了上面同样的工作。这样 CPU1，CPU2 的高速缓存拥有同样的数据。</li>
+<li>CPU1修改了那个字节，被修改后，那个字节被放回CPU1的高速缓存行。但是该信息并没有被写入RAM 。</li>
+<li>CPU2访问该字节，但由于CPU1并未将数据写入RAM ，导致了数据不同步。</li>
+</ol>
+<p>当一个CPU修改高速缓存行中的字节时，计算机中的其它CPU会被通知，它们的高速缓存将视为无效。于是，在上面的情况下， CPU2发现自己的高速缓存中数据已无效， CPU1将立即把自己的数据写回RAM，然后CPU2重新读取该数据。可以看出，高速缓存行在多处理器上会导致一些不利。</p>
+<p>从上面的情况可以看出，在设计数据结构的时候，应该尽量将只读数据与读写数据分开，并具尽量将同一时间访问的数据组合在一起。这样CPU能一次将需要的数据读入。</p>
+<h1 id="编程中对缓存行对齐的优化"><a href="#编程中对缓存行对齐的优化" class="headerlink" title="编程中对缓存行对齐的优化"></a>编程中对缓存行对齐的优化</h1><p>假设有如下结构体<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">Struct __a</div><div class="line">&#123;</div><div class="line">    Int id; // 不易变</div><div class="line">    Int factor;// 易变</div><div class="line">    Char name[64];// 不易变</div><div class="line">    Int value;// 易变</div><div class="line">&#125; ；</div></pre></td></tr></table></figure></p>
+<p>根据上述行对齐原来，这样的数据结构在X86架构下，执行是不利的</p>
+<p>可以做如下调整，保证读写分离行对齐<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">Struct __a</div><div class="line">&#123;</div><div class="line">    Int id; // 不易变</div><div class="line">    Char name[64];// 不易变</div><div class="line">    Char __Align[32 – sizeof(int)+sizeof(name)*sizeof(name[0])%32]</div><div class="line">    Int factor;// 易变</div><div class="line">    Int value;// 易变</div><div class="line">    Char __Align2[32 –2* sizeof(int)%32]</div><div class="line">&#125; ；</div></pre></td></tr></table></figure></p>
+<ul>
+<li>32 – sizeof(int)+sizeof(name)*sizeof(name[0])%32</li>
+<li>32 表示 X86 架构中缓存中，高速缓存行为 32字节 大小。 __Align 用于显式对齐。</li>
+</ul>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;&lt;em&gt;摘要：本文介绍了CPU高速缓存以及高速缓存行对齐，探索编程中对于行对齐的优化&lt;/em&gt;&lt;br&gt;
+    
+    </summary>
+    
+      <category term="Linux内核" scheme="http://blog.snowwalf.com/categories/Linux%E5%86%85%E6%A0%B8/"/>
+    
+    
+      <category term="linux" scheme="http://blog.snowwalf.com/tags/linux/"/>
+    
+      <category term="x86" scheme="http://blog.snowwalf.com/tags/x86/"/>
+    
+      <category term="数据结构" scheme="http://blog.snowwalf.com/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/"/>
+    
+  </entry>
+  
+  <entry>
     <title>bochs+gdb源码级调试linux0.12内核测试环境构建</title>
     <link href="http://blog.snowwalf.com/2011/05/31/bochs-gdb-linux0-12-debug/"/>
     <id>http://blog.snowwalf.com/2011/05/31/bochs-gdb-linux0-12-debug/</id>

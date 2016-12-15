@@ -4,6 +4,30 @@
 
     
   <url>
+    <loc>http://blog.snowwalf.com/2011/09/17/CPU%E9%AB%98%E9%80%9F%E7%BC%93%E5%AD%98%E8%A1%8C%E5%AF%B9%E9%BD%90/</loc>
+    <lastmod>2016-12-15T14:38:16.000Z</lastmod>
+    <data>
+        <display>
+        <title>CPU高速缓存行对齐</title>
+        <pubTime>2011-09-17T01:48:00.000Z</pubTime>
+        
+        <tag>linux</tag>
+         
+        <tag>x86</tag>
+         
+        <tag>数据结构</tag>
+         
+         
+           
+             
+              <breadCrumb title="Linux内核" url="http://blog.snowwalf.com/categories/Linux%E5%86%85%E6%A0%B8/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://blog.snowwalf.com/2016/12/12/ffmpeg-watermark/</loc>
     <lastmod>2016-12-15T14:10:24.000Z</lastmod>
     <data>
