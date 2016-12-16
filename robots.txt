@@ -10,3 +10,4 @@ Disallow: /vendors/
 Disallow: /fancybox/
 
 Sitemap: http://blog.snowwalf.com/sitemap.xml
+Sitemap: http://blog.snowwalf.com/baidusitemap.xml
