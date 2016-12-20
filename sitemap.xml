@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://blog.snowwalf.com/2016/12/20/%E4%B8%83%E7%89%9B%E4%BA%91%E5%AF%8C%E5%AA%92%E4%BD%93%E5%A4%84%E7%90%86-%E5%9B%BE%E7%89%87%E5%A4%84%E7%90%86-imageMogr2/</loc>
+    
+    <lastmod>2016-12-20T17:11:42.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://blog.snowwalf.com/2011/09/17/CPU%E9%AB%98%E9%80%9F%E7%BC%93%E5%AD%98%E8%A1%8C%E5%AF%B9%E9%BD%90/</loc>
     
     <lastmod>2016-12-15T14:38:16.000Z</lastmod>
@@ -44,28 +51,14 @@
   </url>
   
   <url>
-    <loc>http://blog.snowwalf.com/resource/js/src/affix.js</loc>
+    <loc>http://blog.snowwalf.com/resource/js/src/utils.js</loc>
     
     <lastmod>2016-12-13T16:50:20.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://blog.snowwalf.com/resource/js/src/hook-duoshuo.js</loc>
-    
-    <lastmod>2016-12-13T16:50:20.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://blog.snowwalf.com/resource/js/src/bootstrap.js</loc>
-    
-    <lastmod>2016-12-13T16:50:20.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://blog.snowwalf.com/resource/js/src/motion.js</loc>
+    <loc>http://blog.snowwalf.com/resource/js/src/schemes/pisces.js</loc>
     
     <lastmod>2016-12-13T16:50:20.000Z</lastmod>
     
@@ -79,14 +72,28 @@
   </url>
   
   <url>
-    <loc>http://blog.snowwalf.com/resource/js/src/utils.js</loc>
+    <loc>http://blog.snowwalf.com/resource/js/src/bootstrap.js</loc>
     
     <lastmod>2016-12-13T16:50:20.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://blog.snowwalf.com/resource/js/src/schemes/pisces.js</loc>
+    <loc>http://blog.snowwalf.com/resource/js/src/hook-duoshuo.js</loc>
+    
+    <lastmod>2016-12-13T16:50:20.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://blog.snowwalf.com/resource/js/src/affix.js</loc>
+    
+    <lastmod>2016-12-13T16:50:20.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://blog.snowwalf.com/resource/js/src/motion.js</loc>
     
     <lastmod>2016-12-13T16:50:20.000Z</lastmod>
     
