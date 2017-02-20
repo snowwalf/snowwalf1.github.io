@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://blog.snowwalf.com/"/>
-  <updated>2017-01-22T11:52:05.000Z</updated>
+  <updated>2017-02-20T14:11:56.000Z</updated>
   <id>http://blog.snowwalf.com/</id>
   
   <author>
@@ -14,6 +14,131 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>句柄泄露围捕记</title>
+    <link href="http://blog.snowwalf.com/2017/02/18/%E5%8F%A5%E6%9F%84%E6%B3%84%E9%9C%B2%E5%9B%B4%E6%8D%95%E8%AE%B0/"/>
+    <id>http://blog.snowwalf.com/2017/02/18/句柄泄露围捕记/</id>
+    <published>2017-02-18T04:13:44.000Z</published>
+    <updated>2017-02-20T14:11:56.000Z</updated>
+    
+    <content type="html"><![CDATA[<p><em>记录实际的生产环境中遇到的BUG及解决问题的一些经验</em><br><a id="more"></a></p>
+<h1 id="问题发现"><a href="#问题发现" class="headerlink" title="问题发现"></a>问题发现</h1><p>博主负责的一个在线图片处理服务，存在长时间（超过20天）运行后会服务进程出错退出的问题。运维小伙伴把情况报到开发这，并没有更多的信息😵😵😵</p>
+<h1 id="初步分析"><a href="#初步分析" class="headerlink" title="初步分析"></a>初步分析</h1><h2 id="产品服务"><a href="#产品服务" class="headerlink" title="产品服务"></a>产品服务</h2><p>该产品是一个云计算图片处理服务（参见七牛数据处理服务），后台使用到了imageMagick SDK的基本图片处理功能。</p>
+<p>服务同时部署在物理服务器和容器中，多个异地区域机房，但实际仅在其中一个机房的物理集群中发生进程重启的情况（服务使用supervisorctl托管，异常退出后自动重启）。</p>
+<p>线上服务并未开启coredump；出core日志调用栈仅显示捕获signal 11，回放上一条的服务请求并不能触发错误。</p>
+<p>查看该服务在此DC中监控情况，发现峰值TPS在40K+，日均TPS约在20K左右，CPU、内存、磁盘和网络带宽均在警戒值以下，服务器句柄数保持在最高维持在10K左右。</p>
+<h2 id="诊断"><a href="#诊断" class="headerlink" title="诊断"></a>诊断</h2><p>根据经验，长时间运行后服务进程出错退出，往往是因为存在资源泄露，例如内存泄露、句柄泄露、临时文件未删除等。</p>
+<p>调取服务进程的物理资源使用情况进行分析，CPU、内存均无显著异常，但文件句柄使用情况存在问题</p>
+<img src="http://ohgqsah1g.bkt.clouddn.com/20170218/fd-leak.png" class="fd-process" title="服务句柄量">
+<p>从上图中可以看出，服务句柄数基本呈线性增长，陡降的地方为服务进程被重启了（比如服务更新发布），这对于一个长期运行的服务端程序是不合理的。</p>
+<p>故能初步判断出，程序存在文件句柄泄露。</p>
+<h1 id="深入分析"><a href="#深入分析" class="headerlink" title="深入分析"></a>深入分析</h1><h2 id="线上分析"><a href="#线上分析" class="headerlink" title="线上分析"></a>线上分析</h2><p>该服务部署在多个DC，服务发生进程重启均集中在一个DC。该DC服务请求最高，峰值TPS可以达到30+K；相对其他DC的请求量要小一个数量级。</p>
+<p>登录服务部署在DC的一台服务器，使用lsof查询服务进行FD使用情况，可以发现存在大量的FD处于deleted状态（标记删除但仍未释放）。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">lsof -p 9291  | grep deleted</div><div class="line"></div><div class="line">...</div><div class="line">qboximage 9291 qboxserver 1228r      REG        8,1     31346    4487983 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d98ac907d245_452020_1d0 (deleted)</div><div class="line">qboximage 9291 qboxserver 1229r      REG        8,1     18542    4487917 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d9871a4080c3_44d568_364 (deleted)</div><div class="line">qboximage 9291 qboxserver 1230r      REG        8,1     37602    4488004 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d9858c894d31_44b62d_25f (deleted)</div><div class="line">qboximage 9291 qboxserver 1231r      REG        8,1     50062    4487872 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d97fe5e79906_44401e_26d (deleted)</div><div class="line">qboximage 9291 qboxserver 1232r      REG        8,1     12640    4487898 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d9894b49bfcc_45018b_2d9 (deleted)</div><div class="line">qboximage 9291 qboxserver 1233r      REG        8,1     49844    4488020 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d989f6040b2d_450f17_2bf (deleted)</div><div class="line">qboximage 9291 qboxserver 1239r      REG        8,1     10772    4487929 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d980dc71106c_4454e1_1ef (deleted)</div><div class="line">qboximage 9291 qboxserver 1240r      REG        8,1     73538    4487977 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d989d52655ea_450c7e_1b5 (deleted)</div><div class="line">...</div></pre></td></tr></table></figure>
+<p>进程重启后，单日可堆积未释放的FD到500个左右</p>
+<h2 id="日志分析"><a href="#日志分析" class="headerlink" title="日志分析"></a>日志分析</h2><p>用lsof查看未释放的FD，发现都是指向服务流程中的临时文件，文件路径中包含唯一HASH字符串。</p>
+<p>在日志系统中检索上述hash值，发现都是同一种请求类型，即webp图片转成webp请求，猜测可能与webp处理例程有关。</p>
+<p>随机抓取几个请求，任选一台服务器，进行请求回访，结合日志系统使用lsof检索，发现确实每一个webp转webp的请求都会产生一个FD泄露。构造类似的请求，发送线上其他DC进行处理，通过后台日志+lsof，发现同样也发生了FD泄露。</p>
+<p>抓取线上文件，将线上服务请求在本地开发环境进行回放，同样也可以产生句柄泄露。</p>
+<p>至此，BUG可以稳定复现，可以确定针对webp转webp的请求存在句柄泄露。</p>
+<h1 id="调试分析"><a href="#调试分析" class="headerlink" title="调试分析"></a>调试分析</h1><h2 id="泄露定位"><a href="#泄露定位" class="headerlink" title="泄露定位"></a>泄露定位</h2><p>那么问题来了，泄露发生在什么地方呢？该服务端http server使用go语言，图片处理使用cgo调用开源库imageMagick的SDK，服务代码就有上千行，开源库部分博主还不够熟悉😳😳😳</p>
+<p>很显然，生啃代码去找BUG绝对不是个好主意，需要另想办法。</p>
+<p>简单浏览imageMagick的代码，可以发现大部分都是C语言写的（Magick++部分进行了面向对象的封装，使用了C++）。感谢男神谭浩强，博主还记得，C语言中涉及文件句柄的函数主要有open、close、fopen和fclose，也是想到了可以通过Hack底层libc的库函数。</p>
+<p>废话不多说，上代码<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div></pre></td><td class="code"><pre><div class="line">#include &lt;stdio.h&gt;</div><div class="line">#include &lt;string.h&gt;</div><div class="line">#include &lt;dlfcn.h&gt;</div><div class="line">#include &lt;execinfo.h&gt;</div><div class="line"></div><div class="line">typedef int(*OPEN) (const char * pathname, int flags);</div><div class="line">typedef int(*CLOSE) (int fildes);</div><div class="line">typedef FILE*(*FOPEN) (const char * path, const char * mode);</div><div class="line">typedef int(*FCLOSE)(FILE* stream);</div><div class="line"></div><div class="line"></div><div class="line">/* 打印调用栈的最大深度 */</div><div class="line">#define DUMP_STACK_DEPTH_MAX 16</div><div class="line">void dump_trace() &#123;</div><div class="line">    void *stack_trace[DUMP_STACK_DEPTH_MAX] = &#123;0&#125;;</div><div class="line">    char **stack_strings = NULL;</div><div class="line">    int stack_depth = 0;</div><div class="line">    int i = 0;</div><div class="line"></div><div class="line">    /* 获取栈中各层调用函数地址 */</div><div class="line">    stack_depth = backtrace(stack_trace, DUMP_STACK_DEPTH_MAX);</div><div class="line"></div><div class="line">    /* 查找符号表将函数调用地址转换为函数名称 */</div><div class="line">    stack_strings = (char **)backtrace_symbols(stack_trace, stack_depth);</div><div class="line">    if (NULL == stack_strings) &#123;</div><div class="line">        printf(&quot; Memory is not enough while dump Stack Trace! \r\n&quot;);</div><div class="line">        return;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    /* 打印调用栈 */</div><div class="line">    printf(&quot; Stack Trace: \r\n&quot;);</div><div class="line">    for (i = 0; i &lt; stack_depth; ++i) &#123;</div><div class="line">        printf(&quot; [%d] %s \r\n&quot;, i, stack_strings[i]);</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    /* 获取函数名称时申请的内存需要自行释放 */</div><div class="line">    free(stack_strings);</div><div class="line">    stack_strings = NULL;</div><div class="line"></div><div class="line">    return;</div><div class="line">&#125;</div><div class="line"></div><div class="line">int open(const char * pathname, int flags)</div><div class="line">&#123;</div><div class="line">    static void *handle = NULL;</div><div class="line">    static OPEN old_open = NULL;</div><div class="line">    if( !handle )</div><div class="line">    &#123;</div><div class="line">        handle = dlopen(&quot;libc.so.6&quot;, RTLD_LAZY);</div><div class="line">        old_open = (OPEN)dlsym(handle, &quot;open&quot;);</div><div class="line">    &#125;</div><div class="line">    int fd = old_open(pathname, flags); </div><div class="line">    printf(&quot;open function invoked. path=[%s] flag=&lt;%d&gt; fd=[%d]\n&quot;, pathname, flags, fd);</div><div class="line">    dump_trace();</div><div class="line">    return fd;</div><div class="line">&#125;</div><div class="line"></div><div class="line">int close(int fildes)</div><div class="line">&#123;</div><div class="line">    static void *handle = NULL;</div><div class="line">    static CLOSE old_close = NULL;</div><div class="line">    if( !handle )</div><div class="line">    &#123;</div><div class="line">        handle = dlopen(&quot;libc.so.6&quot;, RTLD_LAZY);</div><div class="line">        old_close = (CLOSE)dlsym(handle, &quot;open&quot;);</div><div class="line">    &#125;</div><div class="line">    printf(&quot;close function invoked. fd=[%d] flag=&lt;%d&gt;\n&quot;, fildes);</div><div class="line">    dump_trace();</div><div class="line">    return old_close(fildes);</div><div class="line">&#125;</div><div class="line"></div><div class="line">FILE* fopen(const char * path, const char * mode)</div><div class="line">&#123;</div><div class="line">    static void *handle = NULL;</div><div class="line">    static FOPEN old_fopen = NULL;</div><div class="line">    if( !handle )</div><div class="line">    &#123;</div><div class="line">        handle = dlopen(&quot;libc.so.6&quot;, RTLD_LAZY);</div><div class="line">        old_fopen = (FOPEN)dlsym(handle, &quot;fopen&quot;);</div><div class="line">    &#125;</div><div class="line">    FILE* f =  old_fopen(path,mode);</div><div class="line">    printf(&quot;fopen function invoked. path=[%s] flag=&lt;%s&gt; FILE=[%p]\n&quot;, path, mode,f);</div><div class="line">    dump_trace();</div><div class="line">    return f;</div><div class="line">&#125;</div><div class="line"></div><div class="line">int fclose(FILE* stream)</div><div class="line">&#123;</div><div class="line">    static void *handle = NULL;</div><div class="line">    static FCLOSE old_fclose = NULL;</div><div class="line">    if( !handle )</div><div class="line">    &#123;</div><div class="line">        handle = dlopen(&quot;libc.so.6&quot;, RTLD_LAZY);</div><div class="line">        old_fclose = (FCLOSE)dlsym(handle, &quot;fclose&quot;);</div><div class="line">    &#125;</div><div class="line">    printf(&quot;fclose function invoked. FILE=[%p]\n&quot;, stream);</div><div class="line">    dump_trace();</div><div class="line">    return old_fclose(stream);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>上述代码勾了libc中的open、close、fopen和fclose函数，打印出了调用参数，以及函数调用堆栈</p>
+<p>编译成动态链接库<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">gcc -fPIC -shared -o hook.so hook.c -ldl</div></pre></td></tr></table></figure></p>
+<p>手动挂载动态链接库，本地启动服务程序<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">LD_LIBRARY_PATH=./hook.so ./qboximage -f ./qboximage.conf</div></pre></td></tr></table></figure></p>
+<p>重新发送之前的请求，可以从日志中获取对应FD的情况如下：<br>第一次句柄打开(fopen)<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">fopen function invoked. path=[/workspace/tmp/mogr2_7_34d6663757bf64_1_31a] flag=&lt;rb&gt; FILE=[0x7fe4b403a5b0]</div><div class="line"> Stack Trace: </div><div class="line"></div><div class="line"> [0] /root/hook.so(dump_trace+0x52) [0x7fe4c8e609a7] </div><div class="line"></div><div class="line"> [1] /root/hook.so(fopen+0x96) [0x7fe4c8e60c07] </div><div class="line"></div><div class="line"> [2] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(OpenBlob+0x6eb) [0x7fe4c85112eb] </div><div class="line"></div><div class="line"> [3] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(SetImageInfo+0x262) [0x7fe4c85d8332] </div><div class="line"></div><div class="line"> [4] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImage+0xa1) [0x7fe4c85454a1] </div><div class="line"></div><div class="line"> [5] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImages+0x15b) [0x7fe4c85465db] </div><div class="line"></div><div class="line"> [6] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(ConvertImageCommand+0x993) [0x7fe4c8b83d53] </div><div class="line"></div><div class="line"> [7] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(MagickCommandGenesis+0x6b3) [0x7fe4c8bf0b63] </div><div class="line"></div><div class="line"> [8] /root/dora-image(_cgo_f771dc2ebe72_Cfunc_myConvert+0x4b) [0x86cd5b] </div><div class="line"></div><div class="line"> [9] /root/dora-image() [0x475770]</div></pre></td></tr></table></figure></p>
+<p>对应的句柄关闭：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">fclose function invoked. FILE=[0x7fe4b403a5b0]</div><div class="line"> Stack Trace: </div><div class="line"></div><div class="line"> [0] /root/hook.so(dump_trace+0x52) [0x7fe4c8e609a7] </div><div class="line"></div><div class="line"> [1] /root/hook.so(fclose+0x6f) [0x7fe4c8e60c7c] </div><div class="line"></div><div class="line"> [2] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(CloseBlob+0x241) [0x7fe4c8510b21] </div><div class="line"></div><div class="line"> [3] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(SetImageInfo+0x343) [0x7fe4c85d8413] </div><div class="line"></div><div class="line"> [4] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImage+0xa1) [0x7fe4c85454a1] </div><div class="line"></div><div class="line"> [5] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImages+0x15b) [0x7fe4c85465db] </div><div class="line"></div><div class="line"> [6] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(ConvertImageCommand+0x993) [0x7fe4c8b83d53] </div><div class="line"></div><div class="line"> [7] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(MagickCommandGenesis+0x6b3) [0x7fe4c8bf0b63] </div><div class="line"></div><div class="line"> [8] /root/dora-image(_cgo_f771dc2ebe72_Cfunc_myConvert+0x4b) [0x86cd5b] </div><div class="line"></div><div class="line"> [9] /root/dora-image() [0x475770]</div></pre></td></tr></table></figure></p>
+<p>第二次句柄打开：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">fopen function invoked. path=[/workspace/tmp/mogr2_7_34d6663757bf64_1_31a] flag=&lt;rb&gt; FILE=[0x7fe4b403de50]</div><div class="line"> Stack Trace: </div><div class="line"></div><div class="line"> [0] /root/hook.so(dump_trace+0x52) [0x7fe4c8e609a7] </div><div class="line"></div><div class="line"> [1] /root/hook.so(fopen+0x96) [0x7fe4c8e60c07] </div><div class="line"></div><div class="line"> [2] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(OpenBlob+0x6eb) [0x7fe4c85112eb] </div><div class="line"></div><div class="line"> [3] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(+0x30aada) [0x7fe4c8791ada] </div><div class="line"></div><div class="line"> [4] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImage+0x198) [0x7fe4c8545598] </div><div class="line"></div><div class="line"> [5] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImages+0x15b) [0x7fe4c85465db] </div><div class="line"></div><div class="line"> [6] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(ConvertImageCommand+0x993) [0x7fe4c8b83d53] </div><div class="line"></div><div class="line"> [7] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(MagickCommandGenesis+0x6b3) [0x7fe4c8bf0b63] </div><div class="line"></div><div class="line"> [8] /root/dora-image(_cgo_f771dc2ebe72_Cfunc_myConvert+0x4b) [0x86cd5b] </div><div class="line"></div><div class="line"> [9] /root/dora-image() [0x475770]</div></pre></td></tr></table></figure></p>
+<p>然后就么有关闭了。。。好吧，至此确定了FD在这里落跑了</p>
+<h2 id="代码分析"><a href="#代码分析" class="headerlink" title="代码分析"></a>代码分析</h2><p>那么问题又来了，根据调用堆栈，可以看到第二次调用fopen的是OpenBlob函数。grep了一把imageMagick的代码，发现有好几十处。。。博主最恨这种大海捞针的看代码😠，一定要再想想办法</p>
+<p>既然有了调用堆栈，也就有了函数起始地址和调用偏移地址，为啥不反汇编下代码，减轻看代码的工作量呢？</p>
+<p>首先，看调用堆栈，发现所有imageMagick调用都在动态链接库libMagickCore-6.Q16.so.2中。需要down一份线上同版本的imageMagick代码（v6.9.2，实测最新代码也要同样问题），打开-g编译选项，替换掉开发环境原有的libMagickCore-6.Q16.so.2库，重复之前的调试步骤，获得新的调用堆栈。博主本地常年用的调试版so，故省略该步。。。</p>
+<p>然后，使用objdump反汇编该动态链接库，比较大，需要耐心等待<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">objdump -l -DS ./libMagickCore-6.Q16.so.2 &gt; image.dump</div></pre></td></tr></table></figure></p>
+<p>查找第二次OpenBlob的调用地址，.text段，偏移地址+0x30aada<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">/root/ImageMagick-6.9.1-2/coders/webp.c:250</div><div class="line">  30aada:       85 c0                   test   %eax,%eax</div><div class="line">  30aadc:       0f 84 92 00 00 00       je     30ab74 &lt;ReadWEBPImage+0x124&gt;</div><div class="line">WebPInitDecoderConfig():</div><div class="line">/usr/local/include/webp/decode.h:466</div><div class="line">  30aae2:       4c 8d 6c 24 40          lea    0x40(%rsp),%r13</div><div class="line">  30aae7:       be 03 02 00 00          mov    $0x203,%esi</div><div class="line">  30aaec:       4c 89 ef                mov    %r13,%rdi</div><div class="line">  30aaef:       e8 0c 1a d6 ff          callq  6c500 &lt;WebPInitDecoderConfigInternal@plt&gt;</div></pre></td></tr></table></figure></p>
+<p>抓到了，问题出在coders/webp.c，第250行。。。</p>
+<h1 id="BUG解决"><a href="#BUG解决" class="headerlink" title="BUG解决"></a>BUG解决</h1><p>定位到了出错代码位置就好办了。经过对代码的分析，不难看出，imageMagick在webp的解包器中使用OpenBlob打开了源文件，返回前忘记关闭了。。。</p>
+<p>ps：博主发文前，提交的fix pr已被master代码合并，故上述问题官方最新代码已修复</p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;&lt;em&gt;记录实际的生产环境中遇到的BUG及解决问题的一些经验&lt;/em&gt;&lt;br&gt;
+    
+    </summary>
+    
+      <category term="码经" scheme="http://blog.snowwalf.com/categories/%E7%A0%81%E7%BB%8F/"/>
+    
+    
+      <category term="imageMagick" scheme="http://blog.snowwalf.com/tags/imageMagick/"/>
+    
+      <category term="文件句柄泄露" scheme="http://blog.snowwalf.com/tags/%E6%96%87%E4%BB%B6%E5%8F%A5%E6%9F%84%E6%B3%84%E9%9C%B2/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>ImageMagick工具之Identify分析</title>
+    <link href="http://blog.snowwalf.com/2017/01/25/ImageMagick%E5%B7%A5%E5%85%B7%E4%B9%8BIdentify%E5%88%86%E6%9E%90/"/>
+    <id>http://blog.snowwalf.com/2017/01/25/ImageMagick工具之Identify分析/</id>
+    <published>2017-01-25T02:54:55.000Z</published>
+    <updated>2017-01-25T03:13:48.000Z</updated>
+    
+    <content type="html"><![CDATA[<p><em>摘要：分析ImageMagick工具中identify的使用以及结果内容说明</em><br><a id="more"></a></p>
+<h1 id="基本使用"><a href="#基本使用" class="headerlink" title="基本使用"></a>基本使用</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">$ identify example.png</div><div class="line">-&gt; example.png PNG 750x404 750x404+0+0 8-bit sRGB 103KB 0.000u 0:00.000</div></pre></td></tr></table></figure>
+<h2 id="输出分析"><a href="#输出分析" class="headerlink" title="输出分析"></a>输出分析</h2><table>
+<thead>
+<tr>
+<th>项目名称</th>
+<th>说明</th>
+<th>示例项</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文件名</td>
+<td>图片文件的文件名</td>
+<td>example.png</td>
+</tr>
+<tr>
+<td>图片格式</td>
+<td>图片编码格式</td>
+<td>PNG</td>
+</tr>
+<tr>
+<td>像素大小</td>
+<td>描述图片大小，单位为像素</td>
+<td>750x404</td>
+</tr>
+<tr>
+<td>几何属性（Geometry）</td>
+<td>描述了图片的大小和相对位置，格式<width>x<height>{+-}<xoffset>{+-}<yoffset></yoffset></xoffset></height></width></td>
+<td>750x404+0+0</td>
+</tr>
+<tr>
+<td></td>
+</tr>
+</tbody>
+</table>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;&lt;em&gt;摘要：分析ImageMagick工具中identify的使用以及结果内容说明&lt;/em&gt;&lt;br&gt;
+    
+    </summary>
+    
+      <category term="ImageMagick" scheme="http://blog.snowwalf.com/categories/ImageMagick/"/>
+    
+    
+      <category term="图片" scheme="http://blog.snowwalf.com/tags/%E5%9B%BE%E7%89%87/"/>
+    
+      <category term="ImageMagick" scheme="http://blog.snowwalf.com/tags/ImageMagick/"/>
+    
+      <category term="identify" scheme="http://blog.snowwalf.com/tags/identify/"/>
+    
+  </entry>
   
   <entry>
     <title>彩色模型</title>
@@ -176,7 +301,7 @@
     <link href="http://blog.snowwalf.com/2016/12/20/%E4%B8%83%E7%89%9B%E4%BA%91%E5%AF%8C%E5%AA%92%E4%BD%93%E5%A4%84%E7%90%86-%E5%9B%BE%E7%89%87%E5%A4%84%E7%90%86-imageMogr2/"/>
     <id>http://blog.snowwalf.com/2016/12/20/七牛云富媒体处理-图片处理-imageMogr2/</id>
     <published>2016-12-20T14:58:07.000Z</published>
-    <updated>2016-12-21T03:41:51.000Z</updated>
+    <updated>2017-02-18T08:48:06.000Z</updated>
     
     <content type="html"><![CDATA[<p><em>七牛云富媒体处理-图片处理命令imageMogr2使用示例和demo</em><br><a id="more"></a></p>
 <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>七牛云的官方富媒体处理技术文档: </p>

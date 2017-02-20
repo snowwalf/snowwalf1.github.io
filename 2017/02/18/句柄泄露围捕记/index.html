@@ -1,0 +1,1040 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+  <link href="http://ohgqsah1g.bkt.clouddn.com/blog/resource/lib/fancybox/source/jquery.fancybox.css" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+  
+
+<link href="http://ohgqsah1g.bkt.clouddn.com/blog/resource/lib/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="imageMagick,文件句柄泄露," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="记录实际的生产环境中遇到的BUG及解决问题的一些经验">
+<meta property="og:type" content="article">
+<meta property="og:title" content="句柄泄露围捕记">
+<meta property="og:url" content="http://blog.snowwalf.com/2017/02/18/句柄泄露围捕记/index.html">
+<meta property="og:site_name" content="浮生半日闲">
+<meta property="og:description" content="记录实际的生产环境中遇到的BUG及解决问题的一些经验">
+<meta property="og:image" content="http://ohgqsah1g.bkt.clouddn.com/20170218/fd-leak.png">
+<meta property="og:updated_time" content="2017-02-20T14:11:56.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="句柄泄露围捕记">
+<meta name="twitter:description" content="记录实际的生产环境中遇到的BUG及解决问题的一些经验">
+<meta name="twitter:image" content="http://ohgqsah1g.bkt.clouddn.com/20170218/fd-leak.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://blog.snowwalf.com/2017/02/18/句柄泄露围捕记/"/>
+
+
+
+
+
+  <title> 句柄泄露围捕记 | 浮生半日闲 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?7561e58c17ba50d1b16d0b704ddf0b2c";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">浮生半日闲</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="http://blog.snowwalf.com/2017/02/18/句柄泄露围捕记/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="snowwalf">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.jpg">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="浮生半日闲">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="浮生半日闲" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                句柄泄露围捕记
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-02-18T12:13:44+08:00">
+                2017-02-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+              <span class="post-meta-divider">|</span>
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/码经/" itemprop="url" rel="index">
+                    <span itemprop="name">码经</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <a href="/2017/02/18/句柄泄露围捕记/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/02/18/句柄泄露围捕记/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+             <span id="/2017/02/18/句柄泄露围捕记/" class="leancloud_visitors" data-flag-title="句柄泄露围捕记">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">阅读次数 </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p><em>记录实际的生产环境中遇到的BUG及解决问题的一些经验</em><br><a id="more"></a></p>
+<h1 id="问题发现"><a href="#问题发现" class="headerlink" title="问题发现"></a>问题发现</h1><p>博主负责的一个在线图片处理服务，存在长时间（超过20天）运行后会服务进程出错退出的问题。运维小伙伴把情况报到开发这，并没有更多的信息😵😵😵</p>
+<h1 id="初步分析"><a href="#初步分析" class="headerlink" title="初步分析"></a>初步分析</h1><h2 id="产品服务"><a href="#产品服务" class="headerlink" title="产品服务"></a>产品服务</h2><p>该产品是一个云计算图片处理服务（参见七牛数据处理服务），后台使用到了imageMagick SDK的基本图片处理功能。</p>
+<p>服务同时部署在物理服务器和容器中，多个异地区域机房，但实际仅在其中一个机房的物理集群中发生进程重启的情况（服务使用supervisorctl托管，异常退出后自动重启）。</p>
+<p>线上服务并未开启coredump；出core日志调用栈仅显示捕获signal 11，回放上一条的服务请求并不能触发错误。</p>
+<p>查看该服务在此DC中监控情况，发现峰值TPS在40K+，日均TPS约在20K左右，CPU、内存、磁盘和网络带宽均在警戒值以下，服务器句柄数保持在最高维持在10K左右。</p>
+<h2 id="诊断"><a href="#诊断" class="headerlink" title="诊断"></a>诊断</h2><p>根据经验，长时间运行后服务进程出错退出，往往是因为存在资源泄露，例如内存泄露、句柄泄露、临时文件未删除等。</p>
+<p>调取服务进程的物理资源使用情况进行分析，CPU、内存均无显著异常，但文件句柄使用情况存在问题</p>
+<img src="http://ohgqsah1g.bkt.clouddn.com/20170218/fd-leak.png" class="fd-process" title="服务句柄量">
+<p>从上图中可以看出，服务句柄数基本呈线性增长，陡降的地方为服务进程被重启了（比如服务更新发布），这对于一个长期运行的服务端程序是不合理的。</p>
+<p>故能初步判断出，程序存在文件句柄泄露。</p>
+<h1 id="深入分析"><a href="#深入分析" class="headerlink" title="深入分析"></a>深入分析</h1><h2 id="线上分析"><a href="#线上分析" class="headerlink" title="线上分析"></a>线上分析</h2><p>该服务部署在多个DC，服务发生进程重启均集中在一个DC。该DC服务请求最高，峰值TPS可以达到30+K；相对其他DC的请求量要小一个数量级。</p>
+<p>登录服务部署在DC的一台服务器，使用lsof查询服务进行FD使用情况，可以发现存在大量的FD处于deleted状态（标记删除但仍未释放）。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">lsof -p 9291  | grep deleted</div><div class="line"></div><div class="line">...</div><div class="line">qboximage 9291 qboxserver 1228r      REG        8,1     31346    4487983 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d98ac907d245_452020_1d0 (deleted)</div><div class="line">qboximage 9291 qboxserver 1229r      REG        8,1     18542    4487917 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d9871a4080c3_44d568_364 (deleted)</div><div class="line">qboximage 9291 qboxserver 1230r      REG        8,1     37602    4488004 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d9858c894d31_44b62d_25f (deleted)</div><div class="line">qboximage 9291 qboxserver 1231r      REG        8,1     50062    4487872 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d97fe5e79906_44401e_26d (deleted)</div><div class="line">qboximage 9291 qboxserver 1232r      REG        8,1     12640    4487898 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d9894b49bfcc_45018b_2d9 (deleted)</div><div class="line">qboximage 9291 qboxserver 1233r      REG        8,1     49844    4488020 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d989f6040b2d_450f17_2bf (deleted)</div><div class="line">qboximage 9291 qboxserver 1239r      REG        8,1     10772    4487929 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d980dc71106c_4454e1_1ef (deleted)</div><div class="line">qboximage 9291 qboxserver 1240r      REG        8,1     73538    4487977 /home/qboxserver/image6/_package/run/fopd_tmpdir/mogr2_244b_34d989d52655ea_450c7e_1b5 (deleted)</div><div class="line">...</div></pre></td></tr></table></figure>
+<p>进程重启后，单日可堆积未释放的FD到500个左右</p>
+<h2 id="日志分析"><a href="#日志分析" class="headerlink" title="日志分析"></a>日志分析</h2><p>用lsof查看未释放的FD，发现都是指向服务流程中的临时文件，文件路径中包含唯一HASH字符串。</p>
+<p>在日志系统中检索上述hash值，发现都是同一种请求类型，即webp图片转成webp请求，猜测可能与webp处理例程有关。</p>
+<p>随机抓取几个请求，任选一台服务器，进行请求回访，结合日志系统使用lsof检索，发现确实每一个webp转webp的请求都会产生一个FD泄露。构造类似的请求，发送线上其他DC进行处理，通过后台日志+lsof，发现同样也发生了FD泄露。</p>
+<p>抓取线上文件，将线上服务请求在本地开发环境进行回放，同样也可以产生句柄泄露。</p>
+<p>至此，BUG可以稳定复现，可以确定针对webp转webp的请求存在句柄泄露。</p>
+<h1 id="调试分析"><a href="#调试分析" class="headerlink" title="调试分析"></a>调试分析</h1><h2 id="泄露定位"><a href="#泄露定位" class="headerlink" title="泄露定位"></a>泄露定位</h2><p>那么问题来了，泄露发生在什么地方呢？该服务端http server使用go语言，图片处理使用cgo调用开源库imageMagick的SDK，服务代码就有上千行，开源库部分博主还不够熟悉😳😳😳</p>
+<p>很显然，生啃代码去找BUG绝对不是个好主意，需要另想办法。</p>
+<p>简单浏览imageMagick的代码，可以发现大部分都是C语言写的（Magick++部分进行了面向对象的封装，使用了C++）。感谢男神谭浩强，博主还记得，C语言中涉及文件句柄的函数主要有open、close、fopen和fclose，也是想到了可以通过Hack底层libc的库函数。</p>
+<p>废话不多说，上代码<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div></pre></td><td class="code"><pre><div class="line">#include &lt;stdio.h&gt;</div><div class="line">#include &lt;string.h&gt;</div><div class="line">#include &lt;dlfcn.h&gt;</div><div class="line">#include &lt;execinfo.h&gt;</div><div class="line"></div><div class="line">typedef int(*OPEN) (const char * pathname, int flags);</div><div class="line">typedef int(*CLOSE) (int fildes);</div><div class="line">typedef FILE*(*FOPEN) (const char * path, const char * mode);</div><div class="line">typedef int(*FCLOSE)(FILE* stream);</div><div class="line"></div><div class="line"></div><div class="line">/* 打印调用栈的最大深度 */</div><div class="line">#define DUMP_STACK_DEPTH_MAX 16</div><div class="line">void dump_trace() &#123;</div><div class="line">    void *stack_trace[DUMP_STACK_DEPTH_MAX] = &#123;0&#125;;</div><div class="line">    char **stack_strings = NULL;</div><div class="line">    int stack_depth = 0;</div><div class="line">    int i = 0;</div><div class="line"></div><div class="line">    /* 获取栈中各层调用函数地址 */</div><div class="line">    stack_depth = backtrace(stack_trace, DUMP_STACK_DEPTH_MAX);</div><div class="line"></div><div class="line">    /* 查找符号表将函数调用地址转换为函数名称 */</div><div class="line">    stack_strings = (char **)backtrace_symbols(stack_trace, stack_depth);</div><div class="line">    if (NULL == stack_strings) &#123;</div><div class="line">        printf(&quot; Memory is not enough while dump Stack Trace! \r\n&quot;);</div><div class="line">        return;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    /* 打印调用栈 */</div><div class="line">    printf(&quot; Stack Trace: \r\n&quot;);</div><div class="line">    for (i = 0; i &lt; stack_depth; ++i) &#123;</div><div class="line">        printf(&quot; [%d] %s \r\n&quot;, i, stack_strings[i]);</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    /* 获取函数名称时申请的内存需要自行释放 */</div><div class="line">    free(stack_strings);</div><div class="line">    stack_strings = NULL;</div><div class="line"></div><div class="line">    return;</div><div class="line">&#125;</div><div class="line"></div><div class="line">int open(const char * pathname, int flags)</div><div class="line">&#123;</div><div class="line">    static void *handle = NULL;</div><div class="line">    static OPEN old_open = NULL;</div><div class="line">    if( !handle )</div><div class="line">    &#123;</div><div class="line">        handle = dlopen(&quot;libc.so.6&quot;, RTLD_LAZY);</div><div class="line">        old_open = (OPEN)dlsym(handle, &quot;open&quot;);</div><div class="line">    &#125;</div><div class="line">    int fd = old_open(pathname, flags); </div><div class="line">    printf(&quot;open function invoked. path=[%s] flag=&lt;%d&gt; fd=[%d]\n&quot;, pathname, flags, fd);</div><div class="line">    dump_trace();</div><div class="line">    return fd;</div><div class="line">&#125;</div><div class="line"></div><div class="line">int close(int fildes)</div><div class="line">&#123;</div><div class="line">    static void *handle = NULL;</div><div class="line">    static CLOSE old_close = NULL;</div><div class="line">    if( !handle )</div><div class="line">    &#123;</div><div class="line">        handle = dlopen(&quot;libc.so.6&quot;, RTLD_LAZY);</div><div class="line">        old_close = (CLOSE)dlsym(handle, &quot;open&quot;);</div><div class="line">    &#125;</div><div class="line">    printf(&quot;close function invoked. fd=[%d] flag=&lt;%d&gt;\n&quot;, fildes);</div><div class="line">    dump_trace();</div><div class="line">    return old_close(fildes);</div><div class="line">&#125;</div><div class="line"></div><div class="line">FILE* fopen(const char * path, const char * mode)</div><div class="line">&#123;</div><div class="line">    static void *handle = NULL;</div><div class="line">    static FOPEN old_fopen = NULL;</div><div class="line">    if( !handle )</div><div class="line">    &#123;</div><div class="line">        handle = dlopen(&quot;libc.so.6&quot;, RTLD_LAZY);</div><div class="line">        old_fopen = (FOPEN)dlsym(handle, &quot;fopen&quot;);</div><div class="line">    &#125;</div><div class="line">    FILE* f =  old_fopen(path,mode);</div><div class="line">    printf(&quot;fopen function invoked. path=[%s] flag=&lt;%s&gt; FILE=[%p]\n&quot;, path, mode,f);</div><div class="line">    dump_trace();</div><div class="line">    return f;</div><div class="line">&#125;</div><div class="line"></div><div class="line">int fclose(FILE* stream)</div><div class="line">&#123;</div><div class="line">    static void *handle = NULL;</div><div class="line">    static FCLOSE old_fclose = NULL;</div><div class="line">    if( !handle )</div><div class="line">    &#123;</div><div class="line">        handle = dlopen(&quot;libc.so.6&quot;, RTLD_LAZY);</div><div class="line">        old_fclose = (FCLOSE)dlsym(handle, &quot;fclose&quot;);</div><div class="line">    &#125;</div><div class="line">    printf(&quot;fclose function invoked. FILE=[%p]\n&quot;, stream);</div><div class="line">    dump_trace();</div><div class="line">    return old_fclose(stream);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>上述代码勾了libc中的open、close、fopen和fclose函数，打印出了调用参数，以及函数调用堆栈</p>
+<p>编译成动态链接库<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">gcc -fPIC -shared -o hook.so hook.c -ldl</div></pre></td></tr></table></figure></p>
+<p>手动挂载动态链接库，本地启动服务程序<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">LD_LIBRARY_PATH=./hook.so ./qboximage -f ./qboximage.conf</div></pre></td></tr></table></figure></p>
+<p>重新发送之前的请求，可以从日志中获取对应FD的情况如下：<br>第一次句柄打开(fopen)<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">fopen function invoked. path=[/workspace/tmp/mogr2_7_34d6663757bf64_1_31a] flag=&lt;rb&gt; FILE=[0x7fe4b403a5b0]</div><div class="line"> Stack Trace: </div><div class="line"></div><div class="line"> [0] /root/hook.so(dump_trace+0x52) [0x7fe4c8e609a7] </div><div class="line"></div><div class="line"> [1] /root/hook.so(fopen+0x96) [0x7fe4c8e60c07] </div><div class="line"></div><div class="line"> [2] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(OpenBlob+0x6eb) [0x7fe4c85112eb] </div><div class="line"></div><div class="line"> [3] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(SetImageInfo+0x262) [0x7fe4c85d8332] </div><div class="line"></div><div class="line"> [4] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImage+0xa1) [0x7fe4c85454a1] </div><div class="line"></div><div class="line"> [5] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImages+0x15b) [0x7fe4c85465db] </div><div class="line"></div><div class="line"> [6] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(ConvertImageCommand+0x993) [0x7fe4c8b83d53] </div><div class="line"></div><div class="line"> [7] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(MagickCommandGenesis+0x6b3) [0x7fe4c8bf0b63] </div><div class="line"></div><div class="line"> [8] /root/dora-image(_cgo_f771dc2ebe72_Cfunc_myConvert+0x4b) [0x86cd5b] </div><div class="line"></div><div class="line"> [9] /root/dora-image() [0x475770]</div></pre></td></tr></table></figure></p>
+<p>对应的句柄关闭：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">fclose function invoked. FILE=[0x7fe4b403a5b0]</div><div class="line"> Stack Trace: </div><div class="line"></div><div class="line"> [0] /root/hook.so(dump_trace+0x52) [0x7fe4c8e609a7] </div><div class="line"></div><div class="line"> [1] /root/hook.so(fclose+0x6f) [0x7fe4c8e60c7c] </div><div class="line"></div><div class="line"> [2] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(CloseBlob+0x241) [0x7fe4c8510b21] </div><div class="line"></div><div class="line"> [3] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(SetImageInfo+0x343) [0x7fe4c85d8413] </div><div class="line"></div><div class="line"> [4] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImage+0xa1) [0x7fe4c85454a1] </div><div class="line"></div><div class="line"> [5] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImages+0x15b) [0x7fe4c85465db] </div><div class="line"></div><div class="line"> [6] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(ConvertImageCommand+0x993) [0x7fe4c8b83d53] </div><div class="line"></div><div class="line"> [7] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(MagickCommandGenesis+0x6b3) [0x7fe4c8bf0b63] </div><div class="line"></div><div class="line"> [8] /root/dora-image(_cgo_f771dc2ebe72_Cfunc_myConvert+0x4b) [0x86cd5b] </div><div class="line"></div><div class="line"> [9] /root/dora-image() [0x475770]</div></pre></td></tr></table></figure></p>
+<p>第二次句柄打开：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">fopen function invoked. path=[/workspace/tmp/mogr2_7_34d6663757bf64_1_31a] flag=&lt;rb&gt; FILE=[0x7fe4b403de50]</div><div class="line"> Stack Trace: </div><div class="line"></div><div class="line"> [0] /root/hook.so(dump_trace+0x52) [0x7fe4c8e609a7] </div><div class="line"></div><div class="line"> [1] /root/hook.so(fopen+0x96) [0x7fe4c8e60c07] </div><div class="line"></div><div class="line"> [2] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(OpenBlob+0x6eb) [0x7fe4c85112eb] </div><div class="line"></div><div class="line"> [3] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(+0x30aada) [0x7fe4c8791ada] </div><div class="line"></div><div class="line"> [4] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImage+0x198) [0x7fe4c8545598] </div><div class="line"></div><div class="line"> [5] /root/fop_depend/_package/lib_for_fopd/libMagickCore-6.Q16.so.2(ReadImages+0x15b) [0x7fe4c85465db] </div><div class="line"></div><div class="line"> [6] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(ConvertImageCommand+0x993) [0x7fe4c8b83d53] </div><div class="line"></div><div class="line"> [7] /root/fop_depend/_package/lib_for_fopd/libMagickWand-6.Q16.so.2(MagickCommandGenesis+0x6b3) [0x7fe4c8bf0b63] </div><div class="line"></div><div class="line"> [8] /root/dora-image(_cgo_f771dc2ebe72_Cfunc_myConvert+0x4b) [0x86cd5b] </div><div class="line"></div><div class="line"> [9] /root/dora-image() [0x475770]</div></pre></td></tr></table></figure></p>
+<p>然后就么有关闭了。。。好吧，至此确定了FD在这里落跑了</p>
+<h2 id="代码分析"><a href="#代码分析" class="headerlink" title="代码分析"></a>代码分析</h2><p>那么问题又来了，根据调用堆栈，可以看到第二次调用fopen的是OpenBlob函数。grep了一把imageMagick的代码，发现有好几十处。。。博主最恨这种大海捞针的看代码😠，一定要再想想办法</p>
+<p>既然有了调用堆栈，也就有了函数起始地址和调用偏移地址，为啥不反汇编下代码，减轻看代码的工作量呢？</p>
+<p>首先，看调用堆栈，发现所有imageMagick调用都在动态链接库libMagickCore-6.Q16.so.2中。需要down一份线上同版本的imageMagick代码（v6.9.2，实测最新代码也要同样问题），打开-g编译选项，替换掉开发环境原有的libMagickCore-6.Q16.so.2库，重复之前的调试步骤，获得新的调用堆栈。博主本地常年用的调试版so，故省略该步。。。</p>
+<p>然后，使用objdump反汇编该动态链接库，比较大，需要耐心等待<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">objdump -l -DS ./libMagickCore-6.Q16.so.2 &gt; image.dump</div></pre></td></tr></table></figure></p>
+<p>查找第二次OpenBlob的调用地址，.text段，偏移地址+0x30aada<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">/root/ImageMagick-6.9.1-2/coders/webp.c:250</div><div class="line">  30aada:       85 c0                   test   %eax,%eax</div><div class="line">  30aadc:       0f 84 92 00 00 00       je     30ab74 &lt;ReadWEBPImage+0x124&gt;</div><div class="line">WebPInitDecoderConfig():</div><div class="line">/usr/local/include/webp/decode.h:466</div><div class="line">  30aae2:       4c 8d 6c 24 40          lea    0x40(%rsp),%r13</div><div class="line">  30aae7:       be 03 02 00 00          mov    $0x203,%esi</div><div class="line">  30aaec:       4c 89 ef                mov    %r13,%rdi</div><div class="line">  30aaef:       e8 0c 1a d6 ff          callq  6c500 &lt;WebPInitDecoderConfigInternal@plt&gt;</div></pre></td></tr></table></figure></p>
+<p>抓到了，问题出在coders/webp.c，第250行。。。</p>
+<h1 id="BUG解决"><a href="#BUG解决" class="headerlink" title="BUG解决"></a>BUG解决</h1><p>定位到了出错代码位置就好办了。经过对代码的分析，不难看出，imageMagick在webp的解包器中使用OpenBlob打开了源文件，返回前忘记关闭了。。。</p>
+<p>ps：博主发文前，提交的fix pr已被master代码合并，故上述问题官方最新代码已修复</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/imageMagick/" rel="tag"># imageMagick</a>
+          
+            <a href="/tags/文件句柄泄露/" rel="tag"># 文件句柄泄露</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/01/25/ImageMagick工具之Identify分析/" rel="next" title="ImageMagick工具之Identify分析">
+                <i class="fa fa-chevron-left"></i> ImageMagick工具之Identify分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2017/02/18/句柄泄露围捕记/"
+           data-title="句柄泄露围捕记" data-url="http://blog.snowwalf.com/2017/02/18/句柄泄露围捕记/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.jpg"
+               alt="snowwalf" />
+          <p class="site-author-name" itemprop="name">snowwalf</p>
+          <p class="site-description motion-element" itemprop="description">snowwalf's blog</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">9</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">17</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/snowwalf" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/u/2367967014" target="_blank" title="weibo">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  weibo
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#问题发现"><span class="nav-number">1.</span> <span class="nav-text">问题发现</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#初步分析"><span class="nav-number">2.</span> <span class="nav-text">初步分析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#产品服务"><span class="nav-number">2.1.</span> <span class="nav-text">产品服务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#诊断"><span class="nav-number">2.2.</span> <span class="nav-text">诊断</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#深入分析"><span class="nav-number">3.</span> <span class="nav-text">深入分析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#线上分析"><span class="nav-number">3.1.</span> <span class="nav-text">线上分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#日志分析"><span class="nav-number">3.2.</span> <span class="nav-text">日志分析</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#调试分析"><span class="nav-number">4.</span> <span class="nav-text">调试分析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#泄露定位"><span class="nav-number">4.1.</span> <span class="nav-text">泄露定位</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#代码分析"><span class="nav-number">4.2.</span> <span class="nav-text">代码分析</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#BUG解决"><span class="nav-number">5.</span> <span class="nav-text">BUG解决</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2011 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">snowwalf</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="http://ohgqsah1g.bkt.clouddn.com/blog/resource/lib/jquery/index.js"></script>
+
+  
+  <script type="text/javascript" src="http://ohgqsah1g.bkt.clouddn.com/blog/resource/lib/fastclick/lib/fastclick.min.js"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="http://ohgqsah1g.bkt.clouddn.com/blog/resource/lib/velocity/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="http://ohgqsah1g.bkt.clouddn.com/blog/resource/lib/velocity/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="http://ohgqsah1g.bkt.clouddn.com/blog/resource/lib/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"snowwalf"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+    
+    <script src="http://ohgqsah1g.bkt.clouddn.com/blog/resource/lib/ua-parser-js/dist/ua-parser.min.js"></script>
+    <script src="/js/src/hook-duoshuo.js"></script>
+  
+
+
+
+
+
+
+
+
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+  
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("B0hrXXat5tTidPc9oaGWC6Gq-gzGzoHsz", "gGJa9xVegp4irI1BYMLc6bL9");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+
+</body>
+</html>
